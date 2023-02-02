@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Game</title>
+    <script src="https://yiu.ch/favicon.js"></script>
+    <style>
+        * { font-family: Verdana, Geneva, Tahoma, sans-serif; }
+        body { margin: unset; }
+
+        .equation {
+            position: fixed;
+            display: flex;
+            flex-flow: row;
+            top: 50%;
+            left: 0px;
+            transform: translate(-100%, -50%);
+            transition-duration: 1.5s;
+        }
+        .equation.shown {
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .equation > h1 { margin: 10px; }
+        .equation > .question { color: rgba(0, 0, 0, 0.8); }
+
+        .notification {
+            width: calc(100% - 20px);
+            top: 0px;
+            height: fit-content;
+            padding: 10px;
+            opacity: 0;
+            z-index: 999;
+            transition-duration: 0.5s;
+        }
+        .statistics {
+            display: flex;
+            flex-flow: column;
+            padding: 0px 0px 10px 0px;
+            margin-left: 20px;
+        }
+        .statistics > h3 { line-height: 0px; }
+        .statistics > h3 > span { color: black; }
+        .statistics > .losses { color: rgba(220, 70, 70, 0.8); }
+        .statistics > .wins { color: rgba(123, 211, 123, 1); }
+
+        .inputs {
+            display: flex;
+            flex-flow: row;
+            position: fixed;
+            bottom: 0px;
+            width: 100%;
+        }
+        .inputs > .input { flex: 1 1 auto; }
+        .inputs > .enter {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 10px 50px 10px 50px;
+        }
+        .inputs > * {
+            border: none;
+            border-top: 2.5px solid black;
+            padding: 10px;
+            outline: none;
+            font-size: large;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="info">
+        <p class="notification">a</p>
+        <div class="statistics">
+            <h3 class="wins">wins: <span>0</span></h3>
+            <h3 class="losses">losses: <span>0</span></h3>
+        </div>
+    </div>
+    <div class="equation">
+        <h1 class="first">1</h1>
+        <h1 class="operator">+</h1>
+        <h1 class="last">1</h1>
+        <h1 class="question">=</h1>
+        <h1 class="question">?</h1>
+    </div>
+    <div class="inputs">
+        <input type="text" class="input">
+        <button class="enter">enter</button>
+    </div>
+    <script>
+        let wins = 0
+        let losses = 0
+        let currentEquation = generateEquation()
+        function generateRandom(min, max) {
+            return Math.random() * (max - min) + min
+        }
+        function generateHardness() {
+            let hardness = wins / (losses + (wins / 2))
+            if (isNaN(hardness)) hardness = 0.5
+            if (hardness < 0) hardness = 0.1
+            return hardness
+        }
+        function getFirstDigit(number) {
+            if (typeof number !== "number") throw TypeError("not a number")
+            number = Math.round(number).toString()
+            return parseInt(number[number.length - 1])
+        }
+        function generateEquation() {
+            const hardness = generateHardness()
+            let operator = wins / 2 > losses ? ((generateRandom(0, 1) > 0.5) ? "+" : "-") : "+"
+            let set = [NaN, NaN]
+            while (
+                (wins / 2 > losses && !(getFirstDigit(set[0]) + getFirstDigit(set[1]) > 10)) ||
+                (wins / 2 <= losses && !(getFirstDigit(set[0]) + getFirstDigit(set[1]) <= 10)) ||
+                isNaN(set[0]) && isNaN(set[0]) ||
+                set[0] === set[1]
+            ) {
+                set = [
+                    Math.round(generateRandom(hardness * 10, hardness * 20)),
+                    Math.round(generateRandom(hardness * 10, hardness * 20))
+                ]
+            }
+            return [
+                set, operator,
+                operator === "+" ? (set[0] + set[1]) : (set[0] - set[1])
+            ]
+        }
+        function enterValue(number) {
+            if (currentEquation === null) throw Error("equation not generated")
+            if (typeof number !== "number") throw TypeError("not a number")
+            if (isNaN(number)) throw TypeError("not a number")
+            if (number !== currentEquation[2]) displayWrongAnswer()
+            else displayCorrectAnswer()
+            equationElement.classList.remove("shown")
+            currentEquation = null
+            setTimeout(() => {
+                currentEquation = generateEquation()
+                displayEquation()
+            }, 1500)
+        }
+        
+        const inputElement = document.querySelector(".input")
+        const enterElement = document.querySelector(".enter")
+
+        const firstValueElement = document.querySelector(".equation > .first")
+        const lastValueElement = document.querySelector(".equation > .last")
+        const operatorElement = document.querySelector(".equation > .operator")
+        const equationElement = document.querySelector(".equation")
+        function displayEquation() {
+            if (currentEquation === null) throw Error("equation not generated")
+            firstValueElement.textContent = currentEquation[0][0].toString()
+            lastValueElement.textContent = currentEquation[0][1].toString()
+            operatorElement.textContent = currentEquation[1]
+
+            equationElement.classList.add("shown")
+
+            inputElement.focus()
+        }
+
+        const notificationElement = document.querySelector(".notification")
+        let displayednotificationText = null
+        function displayNotification(text, color) {
+            if (typeof text !== "string" || typeof color !== "string") throw TypeError("not a string")
+            notificationElement.style.opacity = "1"
+            notificationElement.textContent = text
+            notificationElement.style.backgroundColor = color
+            displayednotificationText = text
+            setTimeout(() => {
+                if (displayednotificationText !== text && displayednotificationText !== null) return
+                notificationElement.style.opacity = "0"
+            }, 1000)
+        }
+
+        const lossesCountElement = document.querySelector(".losses > span")
+        function displayWrongAnswer() {
+            if (currentEquation === null) throw Error("equation not generated")
+            losses += 1
+            lossesCountElement.textContent = losses
+            displayNotification(`you got this equation incorrect! (${currentEquation[2]})`, "rgba(220, 70, 70, 0.8)")
+        }
+
+        const winsCountElement = document.querySelector(".wins > span")
+        function displayCorrectAnswer() {
+            if (currentEquation === null) throw Error("equation not generated")
+            wins += 1
+            winsCountElement.textContent = wins
+            displayNotification(`you got this equation correct!`, "rgb(123, 211, 123)")
+        }
+
+        inputElement.addEventListener("keypress", event => {
+            if (event.key !== "Enter") return
+            event.preventDefault()
+            enterElement.click()
+        })
+
+        enterElement.addEventListener("click", _ => {
+            enterValue(parseFloat(inputElement.value))
+            inputElement.value = ""
+        })
+        
+        setTimeout(() => {
+            displayEquation()
+        }, 1000);
+        
+    </script>
+</body>
+</html>
